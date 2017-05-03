@@ -71,7 +71,7 @@ func TestGetLatestPosts(t *testing.T) {
 
 func TestGetPostsForThread(t *testing.T) {
 	var posts []Post
-	GetPostsForThread(db, MakeTimestamp(), 7, &posts)
+	GetPostsForThread(db, MakeTimestamp(), 10, 2, &posts)
 	fmt.Printf("%+v\n", posts)
 }
 

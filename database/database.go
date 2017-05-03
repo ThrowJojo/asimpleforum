@@ -311,10 +311,9 @@ func GetLatestPosts(db *gorm.DB, timestamp int64) *[]Post {
 }
 
 // Gets posts for the thread with the supplied id
-// TODO: Needs a join query to find the posts in a thread, this isn't actually using threadId in it's current state
-// TODO: Needs limit parameter
-func GetPostsForThread(db *gorm.DB, timestamp int64, threadId uint, posts *[]Post) {
-	db.Preload("Authors").Order("timestamp").Limit(10).Where("timestamp < ? AND deleted = ?", timestamp, false).Find(&posts)
+func GetPostsForThread(db *gorm.DB, timestamp int64, limit int, threadId uint, posts *[]Post) {
+	db.Joins("INNER JOIN thread_posts ON thread_posts.post_id = posts.id").Order("timestamp").Preload("Authors").
+			Limit(limit).Where("timestamp < ? AND thread_id = ? AND deleted = ?", timestamp, threadId, false).Find(&posts)
 }
 
 // Creates a epoch millisecond timestamp

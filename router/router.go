@@ -49,15 +49,19 @@ func readLatestPosts(context *gin.Context) {
 
 	timestampParam := context.DefaultQuery("timestamp", strconv.FormatInt(database.MakeTimestamp(), 10))
 	timestamp, timestampErr := strconv.ParseInt(timestampParam, 10, 64)
+
+	limitParam := context.DefaultQuery("limit", "10")
+	limit, limitErr := strconv.Atoi(limitParam)
+
 	threadId, threadIdErr := strconv.ParseUint(context.Param("id"), 10, 64)
 
-	if timestampErr != nil || threadIdErr != nil {
+	if timestampErr != nil || threadIdErr != nil || limitErr != nil {
 		context.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	var posts []database.Post
-	database.GetPostsForThread(db, timestamp, uint(threadId), &posts)
+	database.GetPostsForThread(db, timestamp, limit, uint(threadId), &posts)
 
 	context.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,

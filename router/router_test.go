@@ -60,7 +60,7 @@ func TestReadPostsForThread(t *testing.T) {
 	defer server.Close()
 
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
-	response, err := http.Get(server.URL + "/api/v1/threads/responses/7?timestamp=" + timestampString)
+	response, err := http.Get(server.URL + "/api/v1/threads/responses/2?timestamp=" + timestampString + "&limit=5")
 	defer response.Body.Close()
 
 	fmt.Println(response.StatusCode)
