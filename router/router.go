@@ -268,6 +268,53 @@ func unblockUser(context *gin.Context) {
 
 }
 
+func deleteThread(context *gin.Context) {
+
+	threadId, err := strconv.ParseUint(context.Param("id"), 10, 64)
+
+	if err != nil {
+		context.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	value := context.MustGet("user")
+	user := value.(*database.User)
+
+	if deleteErr := database.DeleteThread(db, user, uint(threadId)); deleteErr != nil {
+		renderError(context, deleteErr)
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H {
+		"status": http.StatusOK,
+	})
+
+}
+
+func deletePost(context *gin.Context) {
+
+	postId, err := strconv.ParseUint(context.Param("id"), 10, 64)
+
+	if err != nil {
+		context.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	value := context.MustGet("user")
+	user := value.(*database.User)
+
+	if deleteErr := database.DeletePost(db, user, uint(postId)); deleteErr != nil {
+		renderError(context, deleteErr)
+		return
+	}
+
+	context.JSON(http.StatusOK, gin.H {
+		"status": http.StatusOK,
+	})
+
+}
+
+
 func renderError(context *gin.Context, err error) {
 	context.JSON(http.StatusBadRequest, gin.H{
 		"status": http.StatusBadRequest,
@@ -299,6 +346,12 @@ func Create() *gin.Engine {
 		threads.GET("/responses/:id", readLatestPosts)
 		threads.POST("/new", authMiddleware(), createThread)
 		threads.POST("/reply/:id", authMiddleware(), addPost)
+		threads.POST("/delete/:id", authMiddleware(), deleteThread)
+	}
+
+	posts := ginRouter.Group("/api/v1/posts")
+	{
+		posts.POST("/delete/:id", authMiddleware(), deletePost)
 	}
 
 	users := ginRouter.Group("/api/v1/users")

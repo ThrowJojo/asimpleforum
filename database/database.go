@@ -161,7 +161,7 @@ func FindThread(db *gorm.DB, id uint) (*Thread, error) {
 // Returns a thread by id but only if the user is the author of it
 func FindUserThread(db *gorm.DB, user *User, id uint) (*Thread, error) {
 	var thread Thread
-	db.Joins("INNER JOIN user_threads ON user_threads.thread_id = threads.id").Where("id = ? AND user_id = ?", id, user.ID).First(&thread)
+	db.Joins("INNER JOIN user_threads ON user_threads.thread_id = threads.id").Where("id = ? AND user_id = ? AND deleted = ?", id, user.ID, false).First(&thread)
 	if thread.ID > 0 {
 		return &thread, nil
 	} else {
@@ -172,7 +172,7 @@ func FindUserThread(db *gorm.DB, user *User, id uint) (*Thread, error) {
 // Returns a post by id but only if the user is the author of it
 func FindUserPost(db *gorm.DB, user *User, id uint) (*Post, error) {
 	var post Post
-	db.Joins("INNER JOIN user_posts ON user_posts.post_id = posts.id").Where("id = ? AND user_id = ?", id, user.ID).First(&post)
+	db.Joins("INNER JOIN user_posts ON user_posts.post_id = posts.id").Where("id = ? AND user_id = ? AND deleted = ?", id, user.ID, false).First(&post)
 	if post.ID > 0 {
 		return &post, nil
 	} else {

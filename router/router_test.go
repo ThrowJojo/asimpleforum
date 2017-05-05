@@ -162,10 +162,9 @@ func TestLoginAndReply(t *testing.T)  {
 	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER2.Password)
-
+	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
 	postData := createJson(map[string]string{"content": "Shut it down! Now!"})
-	postResponse, err := client.Post(server.URL + "/api/v1/threads/reply/7", "application/json", postData)
+	postResponse, err := client.Post(server.URL + "/api/v1/threads/reply/2", "application/json", postData)
 
 	if err != nil {
 		t.Error("Error responding to thread", err)
@@ -212,12 +211,47 @@ func TestUnblockUser(t *testing.T) {
 
 }
 
+func TestDeleteThread(t *testing.T) {
+
+	server := httptest.NewServer(Create())
+	defer server.Close()
+	client := createClient()
+
+	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	if response, err := client.Post(server.URL + "/api/v1/threads/delete/3", "application/json", nil); err != nil {
+		t.Error("Error deleting thread: ", err)
+	} else {
+		jsonPrintBody(response.Body)
+	}
+
+}
+
+func TestDeletePost(t *testing.T) {
+
+	server := httptest.NewServer(Create())
+	defer server.Close()
+	client := createClient()
+
+	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	if response, err := client.Post(server.URL + "/api/v1/posts/delete/3", "application/json", nil); err != nil {
+		t.Error("Request error: ", err)
+	} else {
+		jsonPrintBody(response.Body)
+	}
+
+}
+
 func createClient() *http.Client {
 	cookieJar, _ := cookiejar.New(nil)
 	client := &http.Client{
 		Jar: cookieJar,
 	}
 	return client
+}
+
+func jsonPrintBody(byteBody io.ReadCloser) {
+	bodyString := getBodyString(byteBody)
+	fmt.Print(jsonPrettyPrint(bodyString))
 }
 
 func jsonPrettyPrint(in string) string {
