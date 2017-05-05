@@ -286,6 +286,7 @@ func DeletePost(db *gorm.DB, user *User, postId uint) error {
 }
 
 // Gets latest threads if the user isn't authenticated/user has no block records
+// TODO: Needs a limit parameter
 func GetLatestThreads(db *gorm.DB, timestamp int64, threads *[]Thread) {
 	db.Preload("Authors").Preload("Posts").Preload("Posts.Authors").Order("last_update desc").Limit(10).Where("timestamp < ? AND deleted = ?", timestamp, false).Find(&threads)
 }

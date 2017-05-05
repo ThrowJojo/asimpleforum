@@ -6,8 +6,7 @@ import (
 	"fmt"
 )
 
-// TODO: Change naming of struct?
-type DBConfig struct {
+type ConfigData struct {
 	User string `yaml:"user"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`
@@ -15,9 +14,9 @@ type DBConfig struct {
 }
 
 // TODO: Change database name, secret
-func GetDBConfig() (*DBConfig, error) {
+func LoadConfigData() (*ConfigData, error) {
 
-	dbConfig := DBConfig{}
+	dbConfig := ConfigData{}
 
 	contents, readErr := ioutil.ReadFile("../config.yaml")
 	if readErr != nil {
@@ -33,7 +32,7 @@ func GetDBConfig() (*DBConfig, error) {
 }
 
 func GetConnectionString() (string, error) {
-	if dbConfig, err := GetDBConfig(); err != nil {
+	if dbConfig, err := LoadConfigData(); err != nil {
 		return "", err
 	} else {
 		return fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Database), nil

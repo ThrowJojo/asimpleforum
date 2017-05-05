@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetDBConfig(t *testing.T) {
-	if dbConfig, err := GetDBConfig(); err != nil {
+	if dbConfig, err := LoadConfigData(); err != nil {
 		t.Error("Unexpected error getting DB Config: ", err)
 	} else {
 		fmt.Println(dbConfig)

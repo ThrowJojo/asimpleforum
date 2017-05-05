@@ -280,7 +280,7 @@ func renderError(context *gin.Context, err error) {
 
 func Create() *gin.Engine {
 
-	configData, err := config.GetDBConfig()
+	configData, err := config.LoadConfigData()
 	if err != nil {
 		panic("Issue loading config file")
 	}
