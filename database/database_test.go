@@ -60,7 +60,7 @@ func TestReplyToThread(t *testing.T) {
 
 func TestGetLatestThreads(t *testing.T) {
 	var threads []Thread
-	GetLatestThreads(db, MakeTimestamp(), &threads)
+	GetLatestThreads(db, MakeTimestamp(), 5, &threads)
 	fmt.Printf("%+v\n", threads)
 }
 
@@ -177,7 +177,7 @@ func TestJoinQuery(t *testing.T) {
 func TestGetLatestThreadsForUser(t *testing.T) {
 	user, _ := FindUser(db, 1)
 	var threads []Thread
-	GetLatestThreadsForUser(db, user, MakeTimestamp(), &threads)
+	GetLatestThreadsForUser(db, user, MakeTimestamp(), 10, &threads)
 	fmt.Println(len(threads))
 }
 

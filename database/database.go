@@ -51,8 +51,8 @@ type BlockRecord struct {
 
 type Thread struct {
 	BaseModel
-	Title string `json:"title"`
-	Content string `json:"content"`
+	Title string `json:"title" binding:"required"`
+	Content string `json:"content" binding:"required"`
 	Timestamp int64 `json:"timestamp"`
 	LastUpdate int64 `json:"lastUpdate"`
 	Deleted bool `json:"-"`
@@ -64,7 +64,7 @@ type Post struct {
 	BaseModel
 	Threads []Thread `json:"threads" gorm:"many2many:thread_posts"`
 	Authors []User `json:"authors" gorm:"many2many:user_posts;"`
-	Content string `json:"content"`
+	Content string `json:"content" binding:"required"`
 	Deleted bool `json:"-"`
 	Timestamp int64 `json:"timestamp"`
 }
@@ -286,21 +286,19 @@ func DeletePost(db *gorm.DB, user *User, postId uint) error {
 }
 
 // Gets latest threads if the user isn't authenticated/user has no block records
-// TODO: Needs a limit parameter
-func GetLatestThreads(db *gorm.DB, timestamp int64, threads *[]Thread) {
-	db.Preload("Authors").Preload("Posts").Preload("Posts.Authors").Order("last_update desc").Limit(10).Where("timestamp < ? AND deleted = ?", timestamp, false).Find(&threads)
+func GetLatestThreads(db *gorm.DB, timestamp int64, limit int, threads *[]Thread) {
+	db.Preload("Authors").Preload("Posts").Preload("Posts.Authors").Order("last_update desc").Limit(limit).Where("timestamp < ? AND deleted = ?", timestamp, false).Find(&threads)
 }
 
 // Gets latest threads
-// TODO: Needs a limit parameter
-func GetLatestThreadsForUser(db *gorm.DB, user *User, timestamp int64, threads *[]Thread) {
+func GetLatestThreadsForUser(db *gorm.DB, user *User, timestamp int64, limit int, threads *[]Thread) {
 	var blockedIDs []int
 	GetBlockedIds(db, user, &blockedIDs)
 	if len(blockedIDs) > 0 {
 		db.Joins("INNER JOIN user_threads ON user_threads.thread_id = threads.id").Order("last_update desc").Preload("Authors").Preload("Posts").Preload("Posts.Authors").
-				Limit(10).Where("timestamp < ? AND user_id NOT IN (?) AND deleted = ?", timestamp, blockedIDs, false).Find(&threads)
+				Limit(limit).Where("timestamp < ? AND user_id NOT IN (?) AND deleted = ?", timestamp, blockedIDs, false).Find(&threads)
 	} else {
-		GetLatestThreads(db, timestamp, threads)
+		GetLatestThreads(db, timestamp, limit, threads)
 	}
 }
 

@@ -12,18 +12,21 @@ import (
 )
 
 type AuthRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type QueryRequest struct {
+	Timestamp int64 `form:"timestamp" binding:"required"`
+	Limit int `form:"limit" binding:"required"`
 }
 
 var db *gorm.DB = database.MakeConnection()
 
 func readLatestThreads(context *gin.Context) {
 
-	timestampParam := context.DefaultQuery("timestamp", strconv.FormatInt(database.MakeTimestamp(), 10))
-	timestamp, err := strconv.ParseInt(timestampParam, 10, 64)
-
-	if err != nil {
+	data := new (QueryRequest)
+	if bindErr := context.Bind(data); bindErr != nil {
 		context.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -33,9 +36,9 @@ func readLatestThreads(context *gin.Context) {
 
 	if exists {
 		user := userValue.(*database.User)
-		database.GetLatestThreadsForUser(db, user, timestamp, &threads)
+		database.GetLatestThreadsForUser(db, user, data.Timestamp, data.Limit, &threads)
 	} else {
-		database.GetLatestThreads(db, timestamp, &threads)
+		database.GetLatestThreads(db, data.Timestamp, data.Limit, &threads)
 	}
 
 	context.JSON(http.StatusOK, gin.H{
@@ -47,21 +50,16 @@ func readLatestThreads(context *gin.Context) {
 
 func readLatestPosts(context *gin.Context) {
 
-	timestampParam := context.DefaultQuery("timestamp", strconv.FormatInt(database.MakeTimestamp(), 10))
-	timestamp, timestampErr := strconv.ParseInt(timestampParam, 10, 64)
-
-	limitParam := context.DefaultQuery("limit", "10")
-	limit, limitErr := strconv.Atoi(limitParam)
-
 	threadId, threadIdErr := strconv.ParseUint(context.Param("id"), 10, 64)
+	data := new (QueryRequest)
 
-	if timestampErr != nil || threadIdErr != nil || limitErr != nil {
+	if bindErr := context.Bind(data); threadIdErr != nil || bindErr != nil {
 		context.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	var posts []database.Post
-	database.GetPostsForThread(db, timestamp, limit, uint(threadId), &posts)
+	database.GetPostsForThread(db, data.Timestamp, data.Limit, uint(threadId), &posts)
 
 	context.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,
@@ -107,7 +105,6 @@ func register(context *gin.Context) {
 	}
 
 	createErr := database.CreateUser(db, data.Username, data.Password)
-
 	if createErr != nil {
 		renderError(context, createErr)
 		return
@@ -176,7 +173,7 @@ func createThread(context *gin.Context) {
 	data := new (database.Thread)
 	err := context.BindJSON(data)
 
-	// TODO: Maybe there should be a message to go with binding errors
+	// TODO: Maybe binding errors should just be blank
 	if err != nil {
 		context.AbortWithError(http.StatusBadRequest, err)
 		return

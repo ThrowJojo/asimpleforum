@@ -21,7 +21,7 @@ func TestReadLastThreads(t *testing.T) {
 	defer server.Close()
 
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
-	response, err := http.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString)
+	response, err := http.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString + "&limit=1")
 	defer response.Body.Close()
 
 	if err != nil {
@@ -42,7 +42,7 @@ func TestReadLatestThreads2(t *testing.T) {
 	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
 
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
-	response, err := client.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString)
+	response, err := client.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString + "&limit=10")
 
 	if err != nil {
 		t.Error("Error getting latest threads ", err)
@@ -53,14 +53,13 @@ func TestReadLatestThreads2(t *testing.T) {
 
 }
 
-
 func TestReadPostsForThread(t *testing.T) {
 
 	server := httptest.NewServer(Create())
 	defer server.Close()
 
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
-	response, err := http.Get(server.URL + "/api/v1/threads/responses/2?timestamp=" + timestampString + "&limit=5")
+	response, err := http.Get(server.URL + "/api/v1/threads/responses/2?timestamp=" + timestampString + "&limit=4")
 	defer response.Body.Close()
 
 	fmt.Println(response.StatusCode)
