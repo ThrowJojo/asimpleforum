@@ -1,8 +1,8 @@
 package helpers
 
 import (
-	"github.com/pkg/errors"
 	"strings"
+	"ForumDatabase/errors"
 )
 
 var (
@@ -10,48 +10,46 @@ var (
 	MinLengthContent = 16
 	MinLengthPassword = 8
 	MinLengthUsername = 6
-	ErrTooShort = errors.New("Input too short")
-	ErrContainSpaces = errors.New("Input contains spaces")
 )
 
 // TODO: Probably should add an NG check for these methods
 
-func ValidateTitle(input string) error {
+func ValidateTitle(input string) *errors.UserError {
 	trimmed := strings.Trim(input, " ")
 	if len(trimmed) < MinLengthTitle {
-		return ErrTooShort
+		return errors.ErrTooShort
 	} else {
 		return nil
 	}
 }
 
-func ValidateContent(input string) error {
+func ValidateContent(input string) *errors.UserError {
 	trimmed := strings.Trim(input, " ")
 	if len(trimmed) < MinLengthContent {
-		return ErrTooShort
+		return errors.ErrTooShort
 	} else {
 		return nil
 	}
 }
 
-func ValidatePassword(input string) error {
+func ValidatePassword(input string) *errors.UserError {
 
 	if strings.Contains(input, " ") {
-		return ErrContainSpaces
+		return errors.ErrContainSpaces
 	} else if len(input) < MinLengthPassword {
-		return ErrTooShort
+		return errors.ErrTooShort
 	} else {
 		return nil
 	}
 
 }
 
-func ValidateUsername(input string) error {
+func ValidateUsername(input string) *errors.UserError {
 
 	if strings.Contains(input, " ") {
-		return ErrContainSpaces
+		return errors.ErrContainSpaces
 	} else if len(input) < MinLengthUsername {
-		return ErrTooShort
+		return errors.ErrTooShort
 	} else {
 		return nil
 	}

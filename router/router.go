@@ -9,6 +9,7 @@ import (
 	"github.com/gin-contrib/sessions"
 	"fmt"
 	"ForumDatabase/config"
+	"ForumDatabase/errors"
 )
 
 type AuthRequest struct {
@@ -317,10 +318,11 @@ func deletePost(context *gin.Context) {
 }
 
 
-func renderError(context *gin.Context, err error) {
+func renderError(context *gin.Context, err *errors.UserError) {
 	context.JSON(http.StatusBadRequest, gin.H{
 		"status": http.StatusBadRequest,
 		"message": err.Error(),
+		"error": err.Code,
 	})
 }
 

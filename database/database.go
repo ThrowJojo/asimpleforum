@@ -5,17 +5,10 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"time"
 	"golang.org/x/crypto/bcrypt"
-	"github.com/pkg/errors"
 	"ForumDatabase/helpers"
 	"ForumDatabase/config"
 	"github.com/twinj/uuid"
-)
-
-var (
-	ErrNotExist = errors.New("Record does not exist")
-	ErrBadRecord = errors.New("Bad record")
-	ErrSystem = errors.New("System error")
-	ErrExists = errors.New("Record already exists")
+	"ForumDatabase/errors"
 )
 
 var (
@@ -102,17 +95,17 @@ func Setup(db *gorm.DB) {
 }
 
 // Creates a new user from the username and password(which gets encrypted)
-func CreateUser(db *gorm.DB, username string, password string) error {
+func CreateUser(db *gorm.DB, username string, password string) *errors.UserError {
 
 	unique := uuid.NewV4().String()
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil { return ErrSystem }
+	if err != nil { return errors.ErrSystem }
 
 	var existingUser User
 	db.First(&existingUser, "username = ? OR unique_id = ?", username, unique)
 
 	if existingUser.ID > 0 {
-		return ErrExists
+		return errors.ErrExists
 	}
 
 	if usernameError := helpers.ValidateUsername(username); usernameError != nil {
@@ -130,72 +123,72 @@ func CreateUser(db *gorm.DB, username string, password string) error {
 }
 
 // Finds a user by id
-func FindUser(db *gorm.DB, id uint) (*User, error) {
+func FindUser(db *gorm.DB, id uint) (*User, *errors.UserError) {
 	var user User
 	db.First(&user, id)
 	if user.ID > 0 {
 		return &user, nil
 	} else {
-		return nil, ErrNotExist
+		return nil, errors.ErrNotExist
 	}
 }
 
 // Finds a user by uniqueID
-func FindUserByUnique(db *gorm.DB, unique string) (*User, error) {
+func FindUserByUnique(db *gorm.DB, unique string) (*User, *errors.UserError) {
 	var user User
 	db.Where("unique_id = ?", unique).First(&user)
 	if user.ID > 0 {
 		return &user, nil
 	} else {
-		return nil, ErrNotExist
+		return nil, errors.ErrNotExist
 	}
 }
 
 // Finds a user with the given credentials, returns error if user can't be found/credentials are incorrect
-func FindUserByCredentials(db *gorm.DB, username string, password string) (*User, error) {
+func FindUserByCredentials(db *gorm.DB, username string, password string) (*User, *errors.UserError) {
 	var user User
 	db.Where("username = ?", username).First(&user)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return nil, ErrNotExist
+		return nil, errors.ErrNotExist
 	}
 	return &user, nil
 }
 
 // Finds a thread by id if it hasn't been deleted
-func FindThread(db *gorm.DB, id uint) (*Thread, error) {
+func FindThread(db *gorm.DB, id uint) (*Thread, *errors.UserError) {
 	var thread Thread
 	db.Where("deleted = ?", false).First(&thread, id)
 	if thread.ID > 0 {
 		return &thread, nil
 	} else {
-		return nil, ErrNotExist
+		return nil, errors.ErrNotExist
 	}
 }
 
 // Returns a thread by id but only if the user is the author of it
-func FindUserThread(db *gorm.DB, user *User, id uint) (*Thread, error) {
+func FindUserThread(db *gorm.DB, user *User, id uint) (*Thread, *errors.UserError) {
 	var thread Thread
 	db.Joins("INNER JOIN user_threads ON user_threads.thread_id = threads.id").Where("id = ? AND user_id = ? AND deleted = ?", id, user.ID, false).First(&thread)
 	if thread.ID > 0 {
 		return &thread, nil
 	} else {
-		return nil, ErrNotExist
+		return nil, errors.ErrNotExist
 	}
 }
 
 // Returns a post by id but only if the user is the author of it
-func FindUserPost(db *gorm.DB, user *User, id uint) (*Post, error) {
+func FindUserPost(db *gorm.DB, user *User, id uint) (*Post, *errors.UserError) {
 	var post Post
 	db.Joins("INNER JOIN user_posts ON user_posts.post_id = posts.id").Where("id = ? AND user_id = ? AND deleted = ?", id, user.ID, false).First(&post)
 	if post.ID > 0 {
 		return &post, nil
 	} else {
-		return nil, ErrNotExist
+		return nil, errors.ErrNotExist
 	}
 }
 
 // Creates a thread for the specified user
-func CreateThread(db *gorm.DB, user *User, title string, content string) (*Thread, error) {
+func CreateThread(db *gorm.DB, user *User, title string, content string) (*Thread, *errors.UserError) {
 
 	if titleError := helpers.ValidateTitle(title); titleError != nil {
 		return nil, titleError
@@ -225,13 +218,13 @@ func GetBlockedIds(db *gorm.DB, user *User, userIDs *[]int) {
 }
 
 // Blocks a user with the targetID
-func BlockUser(db *gorm.DB, user *User, targetID uint) error {
+func BlockUser(db *gorm.DB, user *User, targetID uint) *errors.UserError {
 	var existingRecord BlockRecord
 	target, err := FindUser(db, targetID)
 	db.Where("target_id = ? AND user_id = ?", targetID, user.ID).First(&existingRecord)
 
 	if targetID == user.ID {
-		return ErrBadRecord
+		return errors.ErrBadRecord
 	}
 
 	if err == nil && existingRecord.ID < 1 {
@@ -245,19 +238,19 @@ func BlockUser(db *gorm.DB, user *User, targetID uint) error {
 }
 
 // Unblocks a user with the targetID
-func UnblockUser(db *gorm.DB, user *User, targetID uint) error {
+func UnblockUser(db *gorm.DB, user *User, targetID uint) *errors.UserError {
 	var record BlockRecord
 	db.Where("target_id = ? AND user_id = ?", targetID, user.ID).First(&record)
 	if record.ID > 0 {
 		db.Unscoped().Delete(&record)
 		return nil
 	} else {
-		return ErrNotExist
+		return errors.ErrNotExist
 	}
 }
 
 // Replies with content using the threadId
-func ReplyToThread(db *gorm.DB, user *User, threadId uint, content string) (*Post, error) {
+func ReplyToThread(db *gorm.DB, user *User, threadId uint, content string) (*Post, *errors.UserError) {
 
 	if contentErr := helpers.ValidateContent(content); contentErr != nil {
 		return nil, contentErr
@@ -278,7 +271,7 @@ func ReplyToThread(db *gorm.DB, user *User, threadId uint, content string) (*Pos
 }
 
 // Marks the thread with supplied id as deleted if it can be found/the user has permission
-func DeleteThread(db *gorm.DB, user *User, threadId uint) error {
+func DeleteThread(db *gorm.DB, user *User, threadId uint) *errors.UserError {
 	if thread, err := FindUserThread(db, user, threadId); err != nil {
 		return err
 	} else {
@@ -289,7 +282,7 @@ func DeleteThread(db *gorm.DB, user *User, threadId uint) error {
 }
 
 // Marks the post with the supplied id as a deleted if it can be found/the user has permission
-func DeletePost(db *gorm.DB, user *User, postId uint) error {
+func DeletePost(db *gorm.DB, user *User, postId uint) *errors.UserError {
 	if post, err := FindUserPost(db, user, postId); err != nil {
 		return err
 	} else {

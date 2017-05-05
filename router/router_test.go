@@ -167,7 +167,7 @@ func TestBlockUser(t *testing.T) {
 	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER2.Password)
+	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
 	response, err := client.Post(server.URL + "/api/v1/users/block/7", "application/json", nil)
 
 	if err != nil {
