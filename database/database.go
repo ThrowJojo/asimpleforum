@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"ForumDatabase/helpers"
 	"ForumDatabase/config"
+	"github.com/twinj/uuid"
 )
 
 var (
@@ -35,10 +36,11 @@ type BaseModel struct {
 
 type User struct {
 	BaseModel
-	Username string `json:"username"`
-	Password string `json:"-"`
-	Threads []Thread `json:"-" gorm:"many2many:user_threads;"`
-	Posts []Post `json:"-" gorm:"many2many:user_posts;"`
+	Username     string `json:"username"`
+	Password     string `json:"-"`
+	Threads      []Thread `json:"-" gorm:"many2many:user_threads;"`
+	Posts        []Post `json:"-" gorm:"many2many:user_posts;"`
+	UniqueID     string `json:"-"`
 	BlockRecords []BlockRecord `json:"-"`
 }
 
@@ -102,11 +104,12 @@ func Setup(db *gorm.DB) {
 // Creates a new user from the username and password(which gets encrypted)
 func CreateUser(db *gorm.DB, username string, password string) error {
 
+	unique := uuid.NewV4().String()
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil { return ErrSystem }
 
 	var existingUser User
-	db.First(&existingUser, "username = ?", username)
+	db.First(&existingUser, "username = ? OR unique_id = ?", username, unique)
 
 	if existingUser.ID > 0 {
 		return ErrExists
@@ -120,7 +123,7 @@ func CreateUser(db *gorm.DB, username string, password string) error {
 		return passwordError
 	}
 
-	newUser := User{Username: username, Password: string(hash)}
+	newUser := User{Username: username, Password: string(hash), UniqueID: unique}
 	db.Save(&newUser)
 	return nil
 
@@ -130,6 +133,17 @@ func CreateUser(db *gorm.DB, username string, password string) error {
 func FindUser(db *gorm.DB, id uint) (*User, error) {
 	var user User
 	db.First(&user, id)
+	if user.ID > 0 {
+		return &user, nil
+	} else {
+		return nil, ErrNotExist
+	}
+}
+
+// Finds a user by uniqueID
+func FindUserByUnique(db *gorm.DB, unique string) (*User, error) {
+	var user User
+	db.Where("unique_id = ?", unique).First(&user)
 	if user.ID > 0 {
 		return &user, nil
 	} else {

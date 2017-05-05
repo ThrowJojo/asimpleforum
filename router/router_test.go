@@ -108,20 +108,6 @@ func loginWithCredentials(t *testing.T, server *httptest.Server, client *http.Cl
 
 }
 
-func TestAbortBehaviour(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
-	client := createClient()
-
-	response, _ := client.Post(server.URL + "/api/v1/users/test", "application/json", nil)
-
-	fmt.Println("Status code: ", response.StatusCode)
-	bodyString := getBodyString(response.Body)
-	fmt.Print(jsonPrettyPrint(bodyString))
-
-}
-
 func TestRegister(t *testing.T) {
 
 	server := httptest.NewServer(Create())
@@ -164,7 +150,7 @@ func TestLoginAndReply(t *testing.T)  {
 
 	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
 	postData := createJson(map[string]string{"content": "Shut it down! Now!"})
-	postResponse, err := client.Post(server.URL + "/api/v1/threads/reply/2", "application/json", postData)
+	postResponse, err := client.Post(server.URL + "/api/v1/threads/reply/4", "application/json", postData)
 
 	if err != nil {
 		t.Error("Error responding to thread", err)

@@ -85,7 +85,7 @@ func login(context *gin.Context) {
 			"error": userErr.Error(),
 		})
 	} else {
-		session.Set("user_id", user.ID)
+		session.Set("user_id", user.UniqueID)
 		session.Save()
 		context.JSON(http.StatusOK, gin.H {
 			"status": http.StatusOK,
@@ -125,7 +125,7 @@ func authMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		user, err := database.FindUser(db, userID.(uint))
+		user, err := database.FindUserByUnique(db, userID.(string))
 		if err != nil {
 			context.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -142,7 +142,7 @@ func softAuthMiddleware() gin.HandlerFunc {
 		userID := session.Get("user_id")
 
 		if userID != nil {
-			user, err := database.FindUser(db, userID.(uint))
+			user, err := database.FindUserByUnique(db, userID.(string))
 			if err != nil {
 				context.AbortWithStatus(http.StatusUnauthorized)
 				return
@@ -182,7 +182,7 @@ func createThread(context *gin.Context) {
 	value := context.MustGet("user")
 	user := value.(*database.User)
 
-	_, createErr := database.CreateThread(db, user, data.Title, data.Content)
+	thread, createErr := database.CreateThread(db, user, data.Title, data.Content)
 	if createErr != nil {
 		renderError(context, createErr)
 		return
@@ -190,6 +190,7 @@ func createThread(context *gin.Context) {
 
 	context.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,
+		"data": thread,
 	})
 
 }
@@ -208,7 +209,7 @@ func addPost(context *gin.Context) {
 	value := context.MustGet("user")
 	user := value.(*database.User)
 
-	_, replyErr := database.ReplyToThread(db, user, uint(threadId), data.Content)
+	post, replyErr := database.ReplyToThread(db, user, uint(threadId), data.Content)
 	if replyErr != nil {
 		renderError(context, replyErr)
 		return
@@ -216,6 +217,7 @@ func addPost(context *gin.Context) {
 
 	context.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,
+		"data": post,
 	})
 
 }
