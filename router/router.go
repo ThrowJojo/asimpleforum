@@ -328,7 +328,7 @@ func renderError(context *gin.Context, err *errors.UserError) {
 
 func Create() *gin.Engine {
 
-	configData, err := config.LoadConfigData()
+	configData, err := config.LoadConfigWithViper()
 	if err != nil {
 		panic("Issue loading config file")
 	}

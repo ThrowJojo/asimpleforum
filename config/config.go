@@ -4,6 +4,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"fmt"
+	"github.com/spf13/viper"
 )
 
 type ConfigData struct {
@@ -13,26 +14,27 @@ type ConfigData struct {
 	Secret string `yaml:"secret"`
 }
 
-// TODO: Change database name, secret
-func LoadConfigData() (*ConfigData, error) {
+// Loads config.yaml file with viper
+func LoadConfigWithViper() (*ConfigData, error) {
 
-	dbConfig := ConfigData{}
+	viper.SetConfigName("config")
+	viper.AddConfigPath("../")
+	viper.AddConfigPath(".")
+	viper.SetConfigType("yaml")
+	err := viper.ReadInConfig()
 
-	contents, readErr := ioutil.ReadFile("../config.yaml")
-	if readErr != nil {
-		return nil, readErr
+	if err != nil {
+		return nil, err
 	}
 
-	if yamlError := yaml.Unmarshal([]byte(contents), &dbConfig); yamlError != nil {
-		return nil, yamlError
-	}
-
-	return &dbConfig, nil
+	configData := &ConfigData{User: viper.GetString("user"), Password: viper.GetString("password"), Database: viper.GetString("database"), Secret: viper.GetString("secret")}
+	return configData, nil
 
 }
 
+// Formats a connection with data loaded from config.yaml
 func GetConnectionString() (string, error) {
-	if dbConfig, err := LoadConfigData(); err != nil {
+	if dbConfig, err := LoadConfigWithViper(); err != nil {
 		return "", err
 	} else {
 		return fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Database), nil
