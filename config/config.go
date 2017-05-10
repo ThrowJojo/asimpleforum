@@ -1,8 +1,6 @@
 package config
 
 import (
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"fmt"
 	"github.com/spf13/viper"
 )

@@ -53,6 +53,7 @@ type Thread struct {
 	Deleted bool `json:"-"`
 	Authors []User `json:"authors" gorm:"many2many:user_threads;"`
 	Posts []Post `json:"posts" gorm:"many2many:thread_posts"`
+	PostsCount int64 `json:"postsCount"`
 }
 
 type Post struct {
@@ -264,6 +265,7 @@ func ReplyToThread(db *gorm.DB, user *User, threadId uint, content string) (*Pos
 		db.Model(&thread).Association("Posts").Append(&post)
 		db.Model(&user).Association("Posts").Append(&post)
 		thread.LastUpdate = timestamp
+		thread.PostsCount = thread.PostsCount + 1
 		db.Save(&thread)
 		return &post, nil
 	}

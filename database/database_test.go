@@ -55,7 +55,7 @@ func TestFindUserByCredentials2(t *testing.T) {
 
 func TestReplyToThread(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	ReplyToThread(db, user, 2, "The six bears")
+	ReplyToThread(db, user, 1, "The six bears went to town adfsdfsdfsdfsdfdfs")
 }
 
 func TestGetLatestThreads(t *testing.T) {
