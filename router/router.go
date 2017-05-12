@@ -155,20 +155,6 @@ func softAuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-// TODO: Not sure if this is even needed anymore
-func errorMiddleware(context *gin.Context) {
-	context.Next()
-	fmt.Println("PRINT ERRORS")
-	errorToPrint := context.Errors.ByType(gin.ErrorTypePublic).Last()
-	fmt.Println("Errors ", errorToPrint)
-	if errorToPrint != nil {
-		context.JSON(http.StatusOK, gin.H{
-			"status": http.StatusOK,
-			"message": errorToPrint.Error(),
-		})
-	}
-}
-
 func createThread(context *gin.Context) {
 
 	data := new (database.Thread)

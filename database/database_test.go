@@ -64,11 +64,6 @@ func TestGetLatestThreads(t *testing.T) {
 	fmt.Printf("%+v\n", threads)
 }
 
-func TestGetLatestPosts(t *testing.T) {
-	posts := GetLatestPosts(db, MakeTimestamp())
-	fmt.Printf("%+v\n", *posts)
-}
-
 func TestGetPostsForThread(t *testing.T) {
 	var posts []Post
 	GetPostsForThread(db, MakeTimestamp(), 10, 2, &posts)

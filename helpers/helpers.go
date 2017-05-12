@@ -12,8 +12,7 @@ var (
 	MinLengthUsername = 6
 )
 
-// TODO: Probably should add an NG check for these methods
-
+// TODO: Need to add profanity filter
 func ValidateTitle(input string) *errors.UserError {
 	trimmed := strings.Trim(input, " ")
 	if len(trimmed) < MinLengthTitle {
@@ -23,6 +22,7 @@ func ValidateTitle(input string) *errors.UserError {
 	}
 }
 
+// TODO: Need to add profanity filter
 func ValidateContent(input string) *errors.UserError {
 	trimmed := strings.Trim(input, " ")
 	if len(trimmed) < MinLengthContent {
