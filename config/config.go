@@ -9,6 +9,7 @@ type ConfigData struct {
 	User string `yaml:"user"`
 	Password string `yaml:"password"`
 	Database string `yaml:"database"`
+	TestDatabase string `yaml:"test_database"`
 	Secret string `yaml:"secret"`
 }
 
@@ -25,16 +26,24 @@ func LoadConfigWithViper() (*ConfigData, error) {
 		return nil, err
 	}
 
-	configData := &ConfigData{User: viper.GetString("user"), Password: viper.GetString("password"), Database: viper.GetString("database"), Secret: viper.GetString("secret")}
+	configData := &ConfigData{User: viper.GetString("user"),
+		Password: viper.GetString("password"),
+		Database: viper.GetString("database"),
+		TestDatabase: viper.GetString("test_database"),
+		Secret: viper.GetString("secret")}
 	return configData, nil
 
 }
 
 // Formats a connection with data loaded from config.yaml
-func GetConnectionString() (string, error) {
+func GetConnectionString(test bool) (string, error) {
 	if dbConfig, err := LoadConfigWithViper(); err != nil {
 		return "", err
 	} else {
-		return fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Database), nil
+		if test {
+			return fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.TestDatabase), nil
+		} else {
+			return fmt.Sprintf("%s:%s@/%s?charset=utf8&parseTime=True&loc=Local", dbConfig.User, dbConfig.Password, dbConfig.Database), nil
+		}
 	}
 }

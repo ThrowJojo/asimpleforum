@@ -6,7 +6,11 @@ import (
 	"fmt"
 )
 
-var db *gorm.DB = MakeConnection()
+var db *gorm.DB = MakeConnection(true)
+
+func TestClear(t *testing.T) {
+	db.Exec("DROP TABLE block_records, posts, thread_posts, threads, user_posts, user_threads, users")
+}
 
 func TestSetup(t *testing.T) {
 	Setup(db)
@@ -28,8 +32,33 @@ func TestCreateUser(t *testing.T) {
 }
 
 func TestFindUser(t *testing.T) {
+	_, err := FindUser(db, 1)
+	if err != nil {
+		t.Error("Expected to find user")
+	}
+}
+
+func TestCountTotalThreads(t *testing.T) {
+	count := CountTotalThreads(db)
+	fmt.Println(count)
+	if count > 0 {
+		t.Error("Expected 0 threads")
+	}
+}
+
+func TestCreateThread(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	CreateThread(db, user, "POST12342345234", "GDDFSG234234234234")
+	_, err := CreateThread(db, user, "NEW THREAD 1111111", "dfgdfgffjngdkjdjgfdjkkfgjd")
+
+	if err != nil {
+		t.Error("Error creating thread", err)
+	}
+
+	count := CountTotalThreads(db)
+	if count < 1 {
+		t.Error("Expected more than 0 threads")
+	}
+
 }
 
 func TestFindUser2(t *testing.T) {
@@ -41,39 +70,50 @@ func TestFindUser2(t *testing.T) {
 
 func TestFindUserByCredentials(t *testing.T) {
 	_, err := FindUserByCredentials(db, TEST_USER1.Username, TEST_USER1.Password)
-	if err == nil {
-		t.Error("Expected an error")
-	}
-}
-
-func TestFindUserByCredentials2(t *testing.T) {
-	_, err := FindUserByCredentials(db, TEST_USER1.Username, TEST_USER1.Password)
 	if err != nil {
 		t.Error("Expected user object to be " + TEST_USER1.Username)
 	}
 }
 
+func TestCountPostsForThread(t *testing.T) {
+	count := CountPostsForThread(db, 1)
+	if count > 0 {
+		t.Error("Expected 0 posts for thread")
+	}
+}
+
 func TestReplyToThread(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	ReplyToThread(db, user, 1, "The six bears went to town adfsdfsdfsdfsdfdfs")
+	_, err := ReplyToThread(db, user, 1, "The six bears went to town adfsdfsdfsdfsdfdfs")
+	if err != nil {
+		t.Error("Unexpected error creating post", err)
+	}
+	count := CountPostsForThread(db, 1)
+	if count < 1 {
+		t.Error("Expected posts to be more than 0")
+	}
 }
 
 func TestGetLatestThreads(t *testing.T) {
 	var threads []Thread
 	GetLatestThreads(db, MakeTimestamp(), 5, &threads)
-	fmt.Printf("%+v\n", threads)
+	if len(threads) < 1 {
+		t.Error("Expected more than 1 thread")
+	}
+	if len(threads) > 5 {
+		t.Error("Expected less than 5 threads")
+	}
 }
 
 func TestGetPostsForThread(t *testing.T) {
 	var posts []Post
-	GetPostsForThread(db, MakeTimestamp(), 10, 2, &posts)
-	fmt.Printf("%+v\n", posts)
-}
-
-func TestNotIn(t *testing.T) {
-	var threads []Thread
-	db.Limit(10).Where("id not in (?)", []uint{1, 2, 3}).Find(&threads)
-	fmt.Printf("%+v\n", threads)
+	GetPostsForThread(db, MakeTimestamp(), 10, 1, &posts)
+	if len(posts) < 1 {
+		t.Error("Expected more than 1 thread")
+	}
+	if len(posts) > 5 {
+		t.Error("Expected less than 5 posts")
+	}
 }
 
 func TestBlockUser(t *testing.T) {

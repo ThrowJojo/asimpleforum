@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"github.com/gin-contrib/sessions"
-	"fmt"
 	"ForumDatabase/config"
 	"ForumDatabase/errors"
 )
@@ -22,7 +21,7 @@ type QueryRequest struct {
 	Limit int `form:"limit" binding:"required"`
 }
 
-var db *gorm.DB = database.MakeConnection()
+var db *gorm.DB = database.MakeConnection(false)
 
 func readLatestThreads(context *gin.Context) {
 

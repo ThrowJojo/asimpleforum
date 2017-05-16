@@ -66,9 +66,9 @@ type Post struct {
 }
 
 // Gets a connection to the database
-func MakeConnection() *gorm.DB {
+func MakeConnection(test bool) *gorm.DB {
 
-	connectionString, stringErr := config.GetConnectionString()
+	connectionString, stringErr := config.GetConnectionString(test)
 	if stringErr != nil {
 		panic(stringErr)
 	}
@@ -153,6 +153,20 @@ func FindUserByCredentials(db *gorm.DB, username string, password string) (*User
 		return nil, errors.ErrNotExist
 	}
 	return &user, nil
+}
+
+// Counts total number of threads
+func CountTotalThreads(db *gorm.DB) int64 {
+	var count int64
+	db.Table("threads").Count(&count)
+	return count
+}
+
+// Count number of posts for a thread using its id
+func CountPostsForThread(db *gorm.DB, id uint) int64 {
+	var count int64
+	db.Table("thread_posts").Where("thread_id = ?", id).Count(&count)
+	return count
 }
 
 // Finds a thread by id if it hasn't been deleted
