@@ -21,7 +21,7 @@ type QueryRequest struct {
 	Limit int `form:"limit" binding:"required"`
 }
 
-var db *gorm.DB = database.MakeConnection(false)
+var db *gorm.DB
 
 func readLatestThreads(context *gin.Context) {
 
@@ -311,8 +311,9 @@ func renderError(context *gin.Context, err *errors.UserError) {
 	})
 }
 
-func Create() *gin.Engine {
+func Create(test bool) *gin.Engine {
 
+	db = database.MakeConnection(test)
 	configData, err := config.LoadConfigWithViper()
 	if err != nil {
 		panic("Issue loading config file")

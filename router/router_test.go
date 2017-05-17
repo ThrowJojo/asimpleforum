@@ -14,33 +14,95 @@ import (
 	"net/http/cookiejar"
 )
 
+type Response struct {
+	Status int `json:"status"`
+}
+
+var (
+	server *httptest.Server = httptest.NewServer(Create(true))
+	TYPE_JSON = "application/json"
+)
+
+func TestClear(t *testing.T) {
+	db := database.MakeConnection(true)
+	db.Exec("DROP TABLE block_records, posts, thread_posts, threads, user_posts, user_threads, users")
+	db.Close()
+}
+
+func registerUser(user *database.User) Response {
+	client := createClient()
+	data := createJson(map[string]string{"username": user.Username, "password": user.Password})
+	httpRes, _ := client.Post(server.URL + "/api/v1/users/new", TYPE_JSON, data)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
+}
+
+func loginWithCredentials(t *testing.T, client *http.Client, user *database.User) {
+	credentials := createJson(map[string]string{"username": user.Username, "password": user.Password})
+	_, err := client.Post(server.URL + "/auth/login", "application/json", credentials)
+	if err != nil {
+		t.Error("Error logging in: ", err)
+	}
+}
+
+func TestRegister(t *testing.T) {
+	response := registerUser(&database.TEST_USER1)
+	if response.Status != http.StatusOK {
+		t.Error("Expected new user registration to be successful")
+	}
+}
+
+func TestRegister2(t *testing.T) {
+	response := registerUser(&database.TEST_USER2)
+	if response.Status != http.StatusOK {
+		t.Error("Expected second user registration to be successful")
+	}
+}
+
+func TestRegister3(t *testing.T) {
+	response := registerUser(&database.TEST_USER1)
+	if response.Status == http.StatusOK {
+		t.Error("Expected duplicate user registration to fail")
+	}
+}
+
+func TestLogin(t *testing.T) {
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+}
+
+func TestLoginAndCreateThread(t *testing.T) {
+
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+	postData := createJson(map[string]string{"title": "Eyyyyyyyyyyyyy", "content": "I'm not too sure what should go here but here's some more input"})
+	postResponse, postError := client.Post(server.URL + "/api/v1/threads/new", "application/json", postData)
+
+	if postError != nil {
+		t.Error("Error creating new thread", postError)
+	} else {
+		bodyString := getBodyString(postResponse.Body)
+		fmt.Print(jsonPrettyPrint(bodyString))
+	}
+
+}
 
 func TestReadLastThreads(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
-
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
 	response, err := http.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString + "&limit=1")
 	defer response.Body.Close()
-
 	if err != nil {
 		t.Error("Error getting latest threads: ", err)
 	} else {
 		bodyString := getBodyString(response.Body)
 		fmt.Print(jsonPrettyPrint(bodyString))
 	}
-
 }
 
 func TestReadLatestThreads2(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
 	client := createClient()
-
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
-
+	loginWithCredentials(t, client, &database.TEST_USER1)
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
 	response, err := client.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString + "&limit=10")
 
@@ -50,13 +112,9 @@ func TestReadLatestThreads2(t *testing.T) {
 		bodyString := getBodyString(response.Body)
 		fmt.Print(jsonPrettyPrint(bodyString))
 	}
-
 }
 
 func TestReadPostsForThread(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
 
 	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
 	response, err := http.Get(server.URL + "/api/v1/threads/responses/2?timestamp=" + timestampString + "&limit=4")
@@ -73,82 +131,11 @@ func TestReadPostsForThread(t *testing.T) {
 
 }
 
-func TestSessionManager(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
-
-	cookieJar, _ := cookiejar.New(nil)
-	client := &http.Client{
-		Jar: cookieJar,
-	}
-
-	timestampString := strconv.FormatInt(database.MakeTimestamp(), 10)
-	client.Get(server.URL + "/api/v1/threads/latest?timestamp=" + timestampString)
-	response, err := client.Get(server.URL + "/api/v1/posts/latest")
-
-	if err != nil {
-		t.Error("Error testing session manager", err)
-	} else {
-		bodyString := getBodyString(response.Body)
-		fmt.Print(jsonPrettyPrint(bodyString))
-	}
-
-}
-
-
-func loginWithCredentials(t *testing.T, server *httptest.Server, client *http.Client, username string, password string) {
-
-	credentials := createJson(map[string]string{"username": username, "password": password})
-	_, err := client.Post(server.URL + "/auth/login", "application/json", credentials)
-
-	if err != nil {
-		t.Error("Error logging in: ", err)
-	}
-
-}
-
-func TestRegister(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
-	client := createClient()
-
-	data := createJson(map[string]string{"username": "Moreboy", "password": "more543543"})
-	response, _ := client.Post(server.URL + "/api/v1/users/new", "application/json", data)
-
-	bodyString := getBodyString(response.Body)
-	fmt.Print(jsonPrettyPrint(bodyString))
-
-}
-
-func TestLoginAndCreateThread(t *testing.T) {
-
-	server := httptest.NewServer(Create())
-	defer server.Close()
-	client := createClient()
-
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
-
-	postData := createJson(map[string]string{"title": "Eyyyyyyyyyyyyy", "content": "I'm not too sure what should go here but here's some more input"})
-	postResponse, postError := client.Post(server.URL + "/api/v1/threads/new", "application/json", postData)
-
-	if postError != nil {
-		t.Error("Error creating new thread", postError)
-	} else {
-		bodyString := getBodyString(postResponse.Body)
-		fmt.Print(jsonPrettyPrint(bodyString))
-	}
-
-}
-
 func TestLoginAndReply(t *testing.T)  {
 
-	server := httptest.NewServer(Create())
-	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	loginWithCredentials(t, client, &database.TEST_USER1)
 	postData := createJson(map[string]string{"content": "Shut it down! Now!"})
 	postResponse, err := client.Post(server.URL + "/api/v1/threads/reply/4", "application/json", postData)
 
@@ -163,11 +150,9 @@ func TestLoginAndReply(t *testing.T)  {
 
 func TestBlockUser(t *testing.T) {
 
-	server := httptest.NewServer(Create())
-	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	loginWithCredentials(t, client, &database.TEST_USER1)
 	response, err := client.Post(server.URL + "/api/v1/users/block/7", "application/json", nil)
 
 	if err != nil {
@@ -181,11 +166,9 @@ func TestBlockUser(t *testing.T) {
 
 func TestUnblockUser(t *testing.T) {
 
-	server := httptest.NewServer(Create())
-	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	loginWithCredentials(t, client, &database.TEST_USER1)
 	response, err := client.Post(server.URL + "/api/v1/users/unblock/2", "application/json", nil)
 
 	if err != nil {
@@ -199,11 +182,9 @@ func TestUnblockUser(t *testing.T) {
 
 func TestDeleteThread(t *testing.T) {
 
-	server := httptest.NewServer(Create())
-	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	loginWithCredentials(t, client, &database.TEST_USER1)
 	if response, err := client.Post(server.URL + "/api/v1/threads/delete/3", "application/json", nil); err != nil {
 		t.Error("Error deleting thread: ", err)
 	} else {
@@ -214,11 +195,9 @@ func TestDeleteThread(t *testing.T) {
 
 func TestDeletePost(t *testing.T) {
 
-	server := httptest.NewServer(Create())
-	defer server.Close()
 	client := createClient()
 
-	loginWithCredentials(t, server, client, database.TEST_USER1.Username, database.TEST_USER1.Password)
+	loginWithCredentials(t, client, &database.TEST_USER1)
 	if response, err := client.Post(server.URL + "/api/v1/posts/delete/3", "application/json", nil); err != nil {
 		t.Error("Request error: ", err)
 	} else {
@@ -261,4 +240,12 @@ func getBodyString(byteBody io.ReadCloser) string {
 func createJson(data interface{}) *bytes.Buffer {
 	jsonBytes, _ := json.Marshal(data)
 	return bytes.NewBuffer(jsonBytes)
+}
+
+func bindResponse(data io.ReadCloser, response *Response) error {
+	if byteArray, readErr := ioutil.ReadAll(data); readErr != nil {
+		return readErr
+	} else {
+		return json.Unmarshal(byteArray, &response)
+	}
 }

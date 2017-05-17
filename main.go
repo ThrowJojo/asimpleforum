@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	router.Create().Run()
+	router.Create(false).Run()
 }
