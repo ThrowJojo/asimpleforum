@@ -337,8 +337,6 @@ func MakeTimestamp() int64 {
 }
 
 // Gets all the current users from the database
-func GetUsers(db *gorm.DB) *[]User {
-	var users []User
+func GetUsers(db *gorm.DB, users *[]User) {
 	db.Preload("Threads").Preload("Posts").Find(&users)
-	return &users
 }

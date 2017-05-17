@@ -57,7 +57,7 @@ func ValidateUsername(input string) *errors.UserError {
 }
 
 // Checks if an int is in a slice
-func IntInSlice(value int, list []int) bool {
+func IntInSlice(list []int, value int) bool {
 	for _, listValue := range list {
 		if listValue == value {
 			return true

@@ -4,6 +4,7 @@ import (
 	"testing"
 	"github.com/jinzhu/gorm"
 	"fmt"
+	"ForumDatabase/helpers"
 )
 
 var db *gorm.DB = MakeConnection(true)
@@ -40,7 +41,6 @@ func TestFindUser(t *testing.T) {
 
 func TestCountTotalThreads(t *testing.T) {
 	count := CountTotalThreads(db)
-	fmt.Println(count)
 	if count > 0 {
 		t.Error("Expected 0 threads")
 	}
@@ -119,33 +119,34 @@ func TestGetPostsForThread(t *testing.T) {
 func TestBlockUser(t *testing.T) {
 	user, _ := FindUser(db, 1)
 	BlockUser(db, user, 2)
+	var blockedIDs []int
+	GetBlockedIds(db, user, &blockedIDs)
+	if !helpers.IntInSlice(blockedIDs, 2) {
+		t.Error("Expected 2 to be in blocked user IDs")
+	}
 }
 
 func TestUnblockUser(t *testing.T) {
 	user, _ := FindUser(db, 1)
 	UnblockUser(db, user, 2)
-}
-
-func TestGetBlockedIds(t *testing.T) {
-	user, _ := FindUser(db, 1)
 	var blockedIDs []int
 	GetBlockedIds(db, user, &blockedIDs)
-	fmt.Println(blockedIDs)
+	if helpers.IntInSlice(blockedIDs, 2) {
+		t.Error("Expected 2 to NOT be in blocked user IDs")
+	}
 }
 
 func TestFindUserThread(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	thread, err := FindUserThread(db, user, 1)
+	_, err := FindUserThread(db, user, 1)
 	if err != nil {
 		t.Error("Expected thread to be found: ", err)
-	} else {
-		fmt.Println(thread)
 	}
 }
 
 func TestFindUserPost(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	_, err := FindUserPost(db, user, 1000)
+	_, err := FindUserPost(db, user, 1000000)
 	if err == nil {
 		t.Error("Expected post to not be found")
 	}
@@ -153,11 +154,9 @@ func TestFindUserPost(t *testing.T) {
 
 func TestFindUserPost2(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	post, err := FindUserPost(db, user, 1)
+	_, err := FindUserPost(db, user, 1)
 	if err != nil {
 		t.Error("Expected post to be found: ", err)
-	} else {
-		fmt.Println(post)
 	}
 }
 
@@ -167,7 +166,7 @@ func TestFindUserThread2(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error finding thread")
 	} else {
-		fmt.Println("Error: ", err)
+		fmt.Println("Public Error: ", err)
 	}
 }
 
@@ -177,7 +176,7 @@ func TestDeleteThread(t *testing.T) {
 	if deleteErr == nil {
 		t.Error("Expected error deleting thread")
 	} else {
-		fmt.Println("ERROR: ", deleteErr)
+		fmt.Println("Public Error: ", deleteErr)
 	}
 }
 
@@ -187,36 +186,44 @@ func TestDeleteThread2(t *testing.T) {
 	if deleteErr != nil {
 		t.Error("Unexpected error deleting thread", deleteErr)
 	}
+	_, postErr := ReplyToThread(db, user, 1, "Some content to reply with to the original post")
+	if postErr == nil {
+		t.Error("Expected error from attempting to post to deleted thread")
+	}
 }
 
 func TestDeletePost(t *testing.T) {
 	user, _ := FindUser(db, 1)
-	post, postErr := ReplyToThread(db, user, 2, "I'm not sure what else could possibly go here adsfsfdsdf")
-	if postErr != nil {
+
+	thread, threadErr := CreateThread(db, user, "New thread title and what not", "When it feels too hard to hold, When it feels I'm in the dark")
+
+	if threadErr != nil {
+		t.Error("Unexpected error creating thread", threadErr)
+	}
+
+	if post, postErr := ReplyToThread(db, user, thread.ID, "I'm not sure what else could possibly go here adsfsfdsdf"); postErr != nil {
 		t.Error("Unexpected error adding reply: ", postErr)
 	} else {
 		if deleteErr := DeletePost(db, user, post.ID); deleteErr != nil {
 			t.Error("Unexpected error deleting post", deleteErr)
 		}
 	}
-}
 
-func TestJoinQuery(t *testing.T) {
-	var threads []Thread
-	//err := db.Joins("INNER JOIN user_threads ON user_threads.thread_id = threads.id").Where("user_id NOT IN (?)", []int{1, 3}).Find(&threads)
-	db.Joins("INNER JOIN user_threads ON user_threads.thread_id = threads.id").Order("last_update desc").Preload("Authors").Preload("Posts").Preload("Posts.Authors").
-			Limit(10).Where("timestamp < ? AND user_id NOT IN (?)", MakeTimestamp(), []int{1, 3}).Find(&threads)
-	fmt.Println(len(threads))
 }
 
 func TestGetLatestThreadsForUser(t *testing.T) {
 	user, _ := FindUser(db, 1)
 	var threads []Thread
 	GetLatestThreadsForUser(db, user, MakeTimestamp(), 10, &threads)
-	fmt.Println(len(threads))
+	if len(threads) < 1 {
+		t.Error("Expected user to have more than 1 thread")
+	}
 }
 
 func TestGetUsers(t *testing.T) {
-	users := GetUsers(db)
-	fmt.Printf("%+v\n", *users)
+	var users []User
+	GetUsers(db, &users)
+	if len(users) < 1 {
+		t.Error("Expected more than 0 users")
+	}
 }
