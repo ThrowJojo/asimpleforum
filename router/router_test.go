@@ -26,6 +26,7 @@ var (
 func TestClear(t *testing.T) {
 	db := database.MakeConnection(true)
 	db.Exec("DROP TABLE block_records, posts, thread_posts, threads, user_posts, user_threads, users")
+	database.Setup(db)
 	db.Close()
 }
 
@@ -44,6 +45,50 @@ func loginWithCredentials(t *testing.T, client *http.Client, user *database.User
 	if err != nil {
 		t.Error("Error logging in: ", err)
 	}
+}
+
+func createNewThread(client *http.Client, thread *database.Thread) Response {
+	data := createJson(map[string]string{"title": thread.Title, "content": thread.Content})
+	httpRes, _ := client.Post(server.URL + "/api/v1/threads/new", TYPE_JSON, data)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
+}
+
+func respondToThread(client *http.Client, threadId int, post *database.Post) Response {
+	data := createJson(map[string]string{"content": post.Content})
+	httpRes, _ := client.Post(server.URL + "/api/v1/threads/reply/" + strconv.Itoa(threadId), TYPE_JSON, data)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
+}
+
+func blockUserWithId(client *http.Client, userId int) Response {
+	httpRes, _ := client.Post(server.URL + "/api/v1/users/block/" + strconv.Itoa(userId), TYPE_JSON, nil)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
+}
+
+func unblockUserWithId(client *http.Client, userId int) Response {
+	httpRes, _ := client.Post(server.URL + "/api/v1/users/unblock/" + strconv.Itoa(userId), TYPE_JSON, nil)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
+}
+
+func deleteThreadWithId(client *http.Client, threadId int) Response {
+	httpRes, _ := client.Post(server.URL + "/api/v1/threads/delete/" + strconv.Itoa(threadId), TYPE_JSON, nil)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
+}
+
+func deletePostWithId(client *http.Client, postId int) Response {
+	httpRes, _ := client.Post(server.URL + "/api/v1/posts/delete/" + strconv.Itoa(postId), TYPE_JSON, nil)
+	var response Response
+	bindResponse(httpRes.Body, &response)
+	return response
 }
 
 func TestRegister(t *testing.T) {
@@ -72,20 +117,61 @@ func TestLogin(t *testing.T) {
 	loginWithCredentials(t, client, &database.TEST_USER1)
 }
 
-func TestLoginAndCreateThread(t *testing.T) {
-
+func TestCreateThread(t *testing.T) {
 	client := createClient()
 	loginWithCredentials(t, client, &database.TEST_USER1)
-	postData := createJson(map[string]string{"title": "Eyyyyyyyyyyyyy", "content": "I'm not too sure what should go here but here's some more input"})
-	postResponse, postError := client.Post(server.URL + "/api/v1/threads/new", "application/json", postData)
-
-	if postError != nil {
-		t.Error("Error creating new thread", postError)
-	} else {
-		bodyString := getBodyString(postResponse.Body)
-		fmt.Print(jsonPrettyPrint(bodyString))
+	thread := database.Thread{Title: "Eyyyyyyyyyyyyyyyy!", Content: "Not too sure what should be going here but here's some kind of text anyway"}
+	response := createNewThread(client, &thread)
+	if response.Status != http.StatusOK {
+		t.Error("Unexpected issue creating a new thread")
 	}
+}
 
+func TestReplyToThread(t *testing.T)  {
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+	post := database.Post{Content: "Shut it down! Now!"}
+	response := respondToThread(client, 1, &post)
+	if response.Status != http.StatusOK {
+		t.Error("Unexpected issue responding to thread")
+	}
+}
+
+func TestBlockUser(t *testing.T) {
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+	response := blockUserWithId(client, 2)
+	if response.Status != http.StatusOK {
+		t.Error("Unexpected issue blocking user")
+	}
+}
+
+func TestUnblockUser(t *testing.T) {
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+	response := unblockUserWithId(client, 2)
+	if response.Status != http.StatusOK {
+		t.Error("Unexpected issue unblocking user")
+	}
+}
+
+func TestDeletePost(t *testing.T) {
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+	response := deletePostWithId(client, 1)
+	if response.Status != http.StatusOK {
+		t.Error("Unexpected issue deleting post")
+	}
+}
+
+/*
+func TestDeleteThread(t *testing.T) {
+	client := createClient()
+	loginWithCredentials(t, client, &database.TEST_USER1)
+	response := deleteThreadWithId(client, 1)
+	if response.Status != http.StatusOK {
+		t.Error("Unexpected issue deleting thread")
+	}
 }
 
 func TestReadLastThreads(t *testing.T) {
@@ -130,81 +216,7 @@ func TestReadPostsForThread(t *testing.T) {
 	}
 
 }
-
-func TestLoginAndReply(t *testing.T)  {
-
-	client := createClient()
-
-	loginWithCredentials(t, client, &database.TEST_USER1)
-	postData := createJson(map[string]string{"content": "Shut it down! Now!"})
-	postResponse, err := client.Post(server.URL + "/api/v1/threads/reply/4", "application/json", postData)
-
-	if err != nil {
-		t.Error("Error responding to thread", err)
-	} else {
-		bodyString := getBodyString(postResponse.Body)
-		fmt.Print(jsonPrettyPrint(bodyString))
-	}
-
-}
-
-func TestBlockUser(t *testing.T) {
-
-	client := createClient()
-
-	loginWithCredentials(t, client, &database.TEST_USER1)
-	response, err := client.Post(server.URL + "/api/v1/users/block/7", "application/json", nil)
-
-	if err != nil {
-		t.Error("Error blocking user", err)
-	} else {
-		bodyString := getBodyString(response.Body)
-		fmt.Print(jsonPrettyPrint(bodyString))
-	}
-
-}
-
-func TestUnblockUser(t *testing.T) {
-
-	client := createClient()
-
-	loginWithCredentials(t, client, &database.TEST_USER1)
-	response, err := client.Post(server.URL + "/api/v1/users/unblock/2", "application/json", nil)
-
-	if err != nil {
-		t.Error("Error unblocking user", err)
-	} else {
-		bodyString := getBodyString(response.Body)
-		fmt.Print(jsonPrettyPrint(bodyString))
-	}
-
-}
-
-func TestDeleteThread(t *testing.T) {
-
-	client := createClient()
-
-	loginWithCredentials(t, client, &database.TEST_USER1)
-	if response, err := client.Post(server.URL + "/api/v1/threads/delete/3", "application/json", nil); err != nil {
-		t.Error("Error deleting thread: ", err)
-	} else {
-		jsonPrintBody(response.Body)
-	}
-
-}
-
-func TestDeletePost(t *testing.T) {
-
-	client := createClient()
-
-	loginWithCredentials(t, client, &database.TEST_USER1)
-	if response, err := client.Post(server.URL + "/api/v1/posts/delete/3", "application/json", nil); err != nil {
-		t.Error("Request error: ", err)
-	} else {
-		jsonPrintBody(response.Body)
-	}
-
-}
+*/
 
 func createClient() *http.Client {
 	cookieJar, _ := cookiejar.New(nil)
